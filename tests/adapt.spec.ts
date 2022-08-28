@@ -1,4 +1,4 @@
-import { Equal, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm"
+import { Equal, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual, Not } from "typeorm"
 import { adaptRsqlStringToQuery } from "../src/adapt"
 
 describe('adapt', () => {
@@ -31,6 +31,12 @@ describe('adapt', () => {
   it('should be create less than or equal compare', () => {
     expect(sut('age<=17')).toMatchSnapshot([{
       age: LessThanOrEqual('17')
+    }])
+  })
+
+  it('should be not equal than compare', () => {
+    expect(sut('age!=17')).toMatchSnapshot([{
+      age: Not('17')
     }])
   })
 })
