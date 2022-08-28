@@ -1,4 +1,4 @@
-import { ExpressionNode, EQ, GT, GE, LT, LE, NEQ, IN } from '@rsql/ast'
+import { ExpressionNode, EQ, GT, GE, LT, LE, NEQ, IN, OUT } from '@rsql/ast'
 import { parse } from '@rsql/parser';
 import {
   Equal,
@@ -28,6 +28,8 @@ export const adaptRsqlExpressionToQuery = <T>(expression: ExpressionNode): FindO
       return [{ [expression.left.selector]: Not(expression.right.value) }] as FindOptionsWhere<T>[]
     case IN:
       return [{ [expression.left.selector]: In(expression.right.value as string[]) }] as FindOptionsWhere<T>[]
+    case OUT:
+      return [{ [expression.left.selector]: Not(In(expression.right.value as string[])) }] as FindOptionsWhere<T>[]
     default:
       throw Error()
   }

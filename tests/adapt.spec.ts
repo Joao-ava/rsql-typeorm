@@ -45,4 +45,10 @@ describe('adapt', () => {
       name: In(['John', 'Doe'])
     }])
   })
+  
+  it('should be not in compare', () => {
+    expect(sut('name=out=(John,Doe)')).toMatchSnapshot([{
+      name: Not(In(['John', 'Doe']))
+    }])
+  })
 })
