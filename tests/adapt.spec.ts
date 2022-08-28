@@ -1,4 +1,4 @@
-import { Equal, In, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual, Not } from "typeorm"
+import { Equal, In, LessThan, LessThanOrEqual, Like, MoreThan, MoreThanOrEqual, Not } from "typeorm"
 import { adaptRsqlStringToQuery } from "../src/adapt"
 
 describe('adapt', () => {
@@ -49,6 +49,18 @@ describe('adapt', () => {
   it('should be not in compare', () => {
     expect(sut('name=out=(John,Doe)')).toMatchSnapshot([{
       name: Not(In(['John', 'Doe']))
+    }])
+  })
+  
+  it('should be like compare', () => {
+    expect(sut('name==*John')).toMatchSnapshot([{
+      name: Like('%John')
+    }])
+    expect(sut('name==John*')).toMatchSnapshot([{
+      name: Like('John%')
+    }])
+    expect(sut('name==*John*')).toMatchSnapshot([{
+      name: Like('%John%')
     }])
   })
 })
