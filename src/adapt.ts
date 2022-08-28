@@ -1,8 +1,9 @@
-import { ExpressionNode, EQ, GT, GE } from '@rsql/ast'
+import { ExpressionNode, EQ, GT, GE, LT } from '@rsql/ast'
 import { parse } from '@rsql/parser';
 import {
   Equal,
   FindOptionsWhere,
+  LessThan,
   MoreThan,
   MoreThanOrEqual,
 } from 'typeorm'
@@ -16,6 +17,8 @@ export const adaptRsqlExpressionToQuery = <T>(expression: ExpressionNode): FindO
       return [{ [expression.left.selector]: MoreThan(expression.right.value) }] as FindOptionsWhere<T>[]
     case GE:
       return [{ [expression.left.selector]: MoreThanOrEqual(expression.right.value) }] as FindOptionsWhere<T>[]
+    case LT:
+      return [{ [expression.left.selector]: LessThan(expression.right.value) }] as FindOptionsWhere<T>[]
     default:
       throw Error()
   }
