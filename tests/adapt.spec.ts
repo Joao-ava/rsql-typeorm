@@ -75,4 +75,16 @@ describe('adapt', () => {
       age: LessThan('17')
     }])
   })
+
+  it('should be or compare', () => {
+    expect(sut('name==John,age==17,id==2')).toMatchSnapshot([
+      { name: Equal('John') },
+      { age: Equal('17') },
+      { id: Equal('2') }
+    ])
+    expect(sut('name==John*,age<17')).toMatchSnapshot([
+      { name: Like('John%') },
+      { age: LessThan('17') }
+    ])
+  })
 })

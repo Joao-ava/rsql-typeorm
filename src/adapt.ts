@@ -1,4 +1,4 @@
-import { ExpressionNode, EQ, GT, GE, LT, LE, NEQ, IN, OUT, AND } from '@rsql/ast'
+import { ExpressionNode, EQ, GT, GE, LT, LE, NEQ, IN, OUT, AND, OR } from '@rsql/ast'
 import { parse } from '@rsql/parser';
 import {
   Equal,
@@ -13,6 +13,18 @@ import {
 } from 'typeorm'
 
 export const adaptRsqlExpressionToQuery = <T>(expression: ExpressionNode): FindOptionsWhere<T>[] => {
+  if (expression.operator == OR) {
+    const data = [
+      ...adaptRsqlExpressionToQuery(expression.left as ExpressionNode),
+      ...adaptRsqlExpressionToQuery(expression.right as ExpressionNode)
+    ]
+    return data.reduce((acc: FindOptionsWhere<T>[], option) => [
+        ...acc,
+        ...Object.keys(option).map((key) => ({
+          [key]: option[key]
+        }))
+      ], [] as FindOptionsWhere<T>[]) as FindOptionsWhere<T>[]
+  }
   if (expression.operator == AND) {
     const data = [
       ...adaptRsqlExpressionToQuery(expression.left as ExpressionNode),
