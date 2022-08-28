@@ -10,5 +10,19 @@
   "scripts": {
     "test": "jest",
     "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.7",
+    "@types/node": "^18.7.6",
+    "jest": "^28.1.3",
+    "ts-jest": "^28.0.8",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@rsql/ast": "^1.4.0",
+    "@rsql/builder": "^1.4.0",
+    "@rsql/emitter": "^1.4.0",
+    "@rsql/parser": "^1.4.0",
+    "typeorm": "^0.3.7"
   }
 }
