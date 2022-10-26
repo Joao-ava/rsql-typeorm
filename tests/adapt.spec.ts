@@ -1,4 +1,4 @@
-import { Equal, In, LessThan, LessThanOrEqual, Like, MoreThan, MoreThanOrEqual, Not } from "typeorm"
+import { Equal, In, LessThan, LessThanOrEqual, ILike, MoreThan, MoreThanOrEqual, Not } from "typeorm"
 import { adaptRsqlStringToQuery } from "../src/adapt"
 
 describe('adapt', () => {
@@ -54,13 +54,13 @@ describe('adapt', () => {
   
   it('should be like compare', () => {
     expect(sut('name==*John')).toMatchSnapshot([{
-      name: Like('%John')
+      name: ILike('%John')
     }])
     expect(sut('name==John*')).toMatchSnapshot([{
-      name: Like('John%')
+      name: ILike('John%')
     }])
     expect(sut('name==*John*')).toMatchSnapshot([{
-      name: Like('%John%')
+      name: ILike('%John%')
     }])
   })
 
@@ -71,7 +71,7 @@ describe('adapt', () => {
       id: Equal('2')
     }])
     expect(sut('name==John*;age<17')).toMatchSnapshot([{
-      name: Like('John%'),
+      name: ILike('John%'),
       age: LessThan('17')
     }])
   })
@@ -83,7 +83,7 @@ describe('adapt', () => {
       { id: Equal('2') }
     ])
     expect(sut('name==John*,age<17')).toMatchSnapshot([
-      { name: Like('John%') },
+      { name: ILike('John%') },
       { age: LessThan('17') }
     ])
   })

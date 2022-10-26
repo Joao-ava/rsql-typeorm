@@ -6,7 +6,7 @@ import {
   In,
   LessThan,
   LessThanOrEqual,
-  Like,
+  ILike,
   MoreThan,
   MoreThanOrEqual,
   Not,
@@ -49,7 +49,7 @@ export const adaptRsqlExpressionToQuery = <T>(expression: ExpressionNode): FindO
       }
       const leftValue = value.startsWith('*') ? `%${value.slice(1)}` : value
       const finalValue = value.endsWith('*') ? `${leftValue.slice(0, -1)}%` : leftValue
-      return [{ [expression.left.selector]: Like(finalValue) }] as FindOptionsWhere<T>[]
+      return [{ [expression.left.selector]: ILike(finalValue) }] as FindOptionsWhere<T>[]
     case GT:
       return [{ [expression.left.selector]: MoreThan(expression.right.value) }] as FindOptionsWhere<T>[]
     case GE:
