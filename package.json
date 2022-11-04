@@ -1,12 +1,17 @@
 {
   "name": "rsql-typeorm",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "RSQL to typeorm query adapter",
   "main": "dist/src/index.js",
   "repository": "git@github.com:Joao-ava/rsql-typeorm.git",
   "author": "João Alex <joao.alex.apps@gmail.com>",
   "license": "MIT",
   "private": false,
+  "keywords": [
+    "rsql",
+    "fiql",
+    "typeorm"
+  ],
   "scripts": {
     "test": "jest",
     "build": "tsc"
