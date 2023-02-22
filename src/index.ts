@@ -1,1 +1,1 @@
-export * from './adapt'
+export * from './adapt';

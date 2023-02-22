@@ -1,4 +1,17 @@
-import { ExpressionNode, EQ, GT, GE, LT, LE, NEQ, IN, OUT, AND, OR } from '@rsql/ast'
+import {
+  ExpressionNode,
+  ComparisonNode,
+  EQ,
+  GT,
+  GE,
+  LT,
+  LE,
+  NEQ,
+  IN,
+  OUT,
+  AND,
+  OR
+} from '@rsql/ast';
 import { parse } from '@rsql/parser';
 import {
   Equal,
@@ -9,63 +22,115 @@ import {
   ILike,
   MoreThan,
   MoreThanOrEqual,
-  Not,
-} from 'typeorm'
+  Not
+} from 'typeorm';
 
-export const adaptRsqlExpressionToQuery = <T>(expression: ExpressionNode): FindOptionsWhere<T>[] => {
+const mergeArray = <T>(array: T[]) =>
+  array.reduce(
+    (dataAcc, option) => ({
+      ...dataAcc,
+      ...Object.keys(option).reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: Array.isArray(option[key])
+            ? mergeArray([
+                ...option[key],
+                ...(dataAcc[key] ? [dataAcc[key]] : [])
+              ])
+            : option[key]
+        }),
+        {} as FindOptionsWhere<T>
+      )
+    }),
+    {} as FindOptionsWhere<T>
+  );
+
+const handleEqual = <T>(expression: ComparisonNode): FindOptionsWhere<T>[] => {
+  const selectorKey = (expression as ComparisonNode).left.selector;
+  const value = expression.right.value as string;
+  const isNotLike = !value.startsWith('*') && !value.endsWith('*');
+  if (isNotLike) {
+    return [{ [selectorKey]: Equal(value) }] as FindOptionsWhere<T>[];
+  }
+  const leftValue = value.startsWith('*') ? `%${value.slice(1)}` : value;
+  const finalValue = value.endsWith('*')
+    ? `${leftValue.slice(0, -1)}%`
+    : leftValue;
+  return [{ [selectorKey]: ILike(finalValue) }] as FindOptionsWhere<T>[];
+};
+
+export const adaptRsqlExpressionToQuery = <T>(
+  expression: ExpressionNode
+): FindOptionsWhere<T>[] => {
   if (expression.operator == OR) {
     const data = [
       ...adaptRsqlExpressionToQuery(expression.left as ExpressionNode),
       ...adaptRsqlExpressionToQuery(expression.right as ExpressionNode)
-    ]
-    return data.reduce((acc: FindOptionsWhere<T>[], option) => [
+    ];
+    return data.reduce(
+      (acc: FindOptionsWhere<T>[], option) => [
         ...acc,
         ...Object.keys(option).map((key) => ({
           [key]: option[key]
         }))
-      ], [] as FindOptionsWhere<T>[]) as FindOptionsWhere<T>[]
+      ],
+      [] as FindOptionsWhere<T>[]
+    ) as FindOptionsWhere<T>[];
   }
   if (expression.operator == AND) {
     const data = [
       ...adaptRsqlExpressionToQuery(expression.left as ExpressionNode),
       ...adaptRsqlExpressionToQuery(expression.right as ExpressionNode)
-    ]
+    ];
+    return [mergeArray(data)];
+  }
+  const selectorKey = (expression as ComparisonNode).left.selector;
+  const isRelationField = selectorKey.includes('.');
+  if (isRelationField) {
+    const [relation, field] = selectorKey.split('.');
     return [
-      data.reduce((acc, option) => ({
-        ...acc,
-        ...Object.keys(option).reduce((acc, key) => ({
-          ...acc,
-          [key]: option[key]
-        }), {} as FindOptionsWhere<T>)
-      }), {} as FindOptionsWhere<T>)
-    ]
+      {
+        [relation]: adaptRsqlExpressionToQuery({
+          ...expression,
+          left: { ...expression.left, selector: field }
+        } as ComparisonNode)
+      }
+    ] as FindOptionsWhere<T>[];
   }
   switch (expression.operator) {
     case EQ:
-      const value = expression.right.value as string
-      const isNotLike = !value.startsWith('*') && !value.endsWith('*')
-      if (isNotLike) {
-        return [{ [expression.left.selector]: Equal(value) }] as FindOptionsWhere<T>[]
-      }
-      const leftValue = value.startsWith('*') ? `%${value.slice(1)}` : value
-      const finalValue = value.endsWith('*') ? `${leftValue.slice(0, -1)}%` : leftValue
-      return [{ [expression.left.selector]: ILike(finalValue) }] as FindOptionsWhere<T>[]
+      return handleEqual(expression);
     case GT:
-      return [{ [expression.left.selector]: MoreThan(expression.right.value) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: MoreThan(expression.right.value) }
+      ] as FindOptionsWhere<T>[];
     case GE:
-      return [{ [expression.left.selector]: MoreThanOrEqual(expression.right.value) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: MoreThanOrEqual(expression.right.value) }
+      ] as FindOptionsWhere<T>[];
     case LT:
-      return [{ [expression.left.selector]: LessThan(expression.right.value) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: LessThan(expression.right.value) }
+      ] as FindOptionsWhere<T>[];
     case LE:
-      return [{ [expression.left.selector]: LessThanOrEqual(expression.right.value) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: LessThanOrEqual(expression.right.value) }
+      ] as FindOptionsWhere<T>[];
     case NEQ:
-      return [{ [expression.left.selector]: Not(expression.right.value) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: Not(expression.right.value) }
+      ] as FindOptionsWhere<T>[];
     case IN:
-      return [{ [expression.left.selector]: In(expression.right.value as string[]) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: In(expression.right.value as string[]) }
+      ] as FindOptionsWhere<T>[];
     case OUT:
-      return [{ [expression.left.selector]: Not(In(expression.right.value as string[])) }] as FindOptionsWhere<T>[]
+      return [
+        { [selectorKey]: Not(In(expression.right.value as string[])) }
+      ] as FindOptionsWhere<T>[];
   }
-}
+};
 
-export const adaptRsqlStringToQuery = <T>(expression: string): FindOptionsWhere<T>[] =>
-  adaptRsqlExpressionToQuery<T>(parse(expression))
+export const adaptRsqlStringToQuery = <T>(
+  expression: string
+): FindOptionsWhere<T>[] => adaptRsqlExpressionToQuery<T>(parse(expression));
