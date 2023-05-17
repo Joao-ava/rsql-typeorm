@@ -22,7 +22,9 @@ import {
   ILike,
   MoreThan,
   MoreThanOrEqual,
-  Not
+  Not,
+  And,
+  FindOperator
 } from 'typeorm';
 
 const mergeArray = <T>(array: T[]) =>
@@ -59,6 +61,52 @@ const handleEqual = <T>(expression: ComparisonNode): FindOptionsWhere<T>[] => {
   return [{ [selectorKey]: ILike(finalValue) }] as FindOptionsWhere<T>[];
 };
 
+const getComparisonBySelector = (
+  key: string,
+  expression: ExpressionNode
+): ExpressionNode[] => {
+  if (expression.type === 'LOGIC')
+    return [
+      ...getComparisonBySelector(key, expression.left),
+      ...getComparisonBySelector(key, expression.right)
+    ];
+
+  if (expression.left.selector !== key) return [];
+  return [expression];
+};
+
+const getSelectors = (expression: ExpressionNode): string[] => {
+  if (expression.type === 'COMPARISON') return [expression.left.selector];
+  return [...getSelectors(expression.left), ...getSelectors(expression.right)];
+};
+
+const handleAnd = ({
+  left,
+  right
+}: ExpressionNode): FindOptionsWhere<unknown>[] => {
+  const leftKeys = getSelectors(left as ExpressionNode);
+  const rightKeys = getSelectors(right as ExpressionNode);
+  const sameKeys = leftKeys.filter((key) => rightKeys.includes(key));
+  return [
+    mergeArray([
+      ...adaptRsqlExpressionToQuery(left as ExpressionNode),
+      ...adaptRsqlExpressionToQuery(right as ExpressionNode),
+      ...sameKeys.map((key) => ({
+        [key]: And(
+          ...([
+            getComparisonBySelector(key, left as ExpressionNode).map((item) =>
+              adaptRsqlExpressionToQuery(item).map((result) => result[key])
+            ),
+            getComparisonBySelector(key, right as ExpressionNode).map((item) =>
+              adaptRsqlExpressionToQuery(item).map((result) => result[key])
+            )
+          ].flat(2) as unknown as FindOperator<unknown>[])
+        )
+      }))
+    ])
+  ];
+};
+
 export const adaptRsqlExpressionToQuery = <T>(
   expression: ExpressionNode
 ): FindOptionsWhere<T>[] => {
@@ -78,11 +126,7 @@ export const adaptRsqlExpressionToQuery = <T>(
     ) as FindOptionsWhere<T>[];
   }
   if (expression.operator == AND) {
-    const data = [
-      ...adaptRsqlExpressionToQuery(expression.left as ExpressionNode),
-      ...adaptRsqlExpressionToQuery(expression.right as ExpressionNode)
-    ];
-    return [mergeArray(data)];
+    return handleAnd(expression);
   }
   const selectorKey = (expression as ComparisonNode).left.selector;
   const isRelationField = selectorKey.includes('.');

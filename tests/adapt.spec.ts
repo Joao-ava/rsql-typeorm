@@ -6,9 +6,11 @@ import {
   ILike,
   MoreThan,
   MoreThanOrEqual,
-  Not
+  Not,
+  And
 } from 'typeorm';
-import { adaptRsqlStringToQuery } from '../src/adapt';
+
+import { adaptRsqlStringToQuery } from '../src';
 
 describe('adapt', () => {
   const sut = (expression: string) =>
@@ -145,6 +147,12 @@ describe('adapt', () => {
           currency: Equal('USD')
         }
       }
+    ]);
+  });
+
+  it('should be able to perform the operation AND in the same field', () => {
+    expect(sut('amount>0;amount<20')).toMatchSnapshot([
+      { amount: And(MoreThan('0'), LessThan('20')) }
     ]);
   });
 });
