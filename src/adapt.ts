@@ -27,25 +27,32 @@ import {
   FindOperator
 } from 'typeorm';
 
-const mergeArray = <T>(array: T[]) =>
-  array.reduce(
-    (dataAcc, option) => ({
-      ...dataAcc,
-      ...Object.keys(option).reduce(
-        (acc, key) => ({
+const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
+  function mergeRecursive(first: T, second: T): T {
+    const firstKeys = Object.keys(first);
+    const secondKeys = Object.keys(second);
+    return secondKeys.reduce(
+      (acc, key) => {
+        const firstHasKey = firstKeys.includes(key);
+        const isObject =
+          typeof second[key] === 'object' && !Array.isArray(second[key]);
+        const value =
+          firstHasKey && isObject
+            ? mergeRecursive(first[key], second[key])
+            : second[key];
+        return {
           ...acc,
-          [key]: Array.isArray(option[key])
-            ? mergeArray([
-                ...option[key],
-                ...(dataAcc[key] ? [dataAcc[key]] : [])
-              ])
-            : option[key]
-        }),
-        {} as FindOptionsWhere<T>
-      )
-    }),
-    {} as FindOptionsWhere<T>
-  );
+          [key]: value
+        };
+      },
+      { ...first }
+    );
+  }
+
+  return array.reduce((mergedObject, currentObject) => {
+    return mergeRecursive(mergedObject, currentObject);
+  }, {} as T);
+};
 
 const handleEqual = <T>(expression: ComparisonNode): FindOptionsWhere<T>[] => {
   const selectorKey = (expression as ComparisonNode).left.selector;
@@ -87,6 +94,17 @@ const handleAnd = ({
   const leftKeys = getSelectors(left as ExpressionNode);
   const rightKeys = getSelectors(right as ExpressionNode);
   const sameKeys = leftKeys.filter((key) => rightKeys.includes(key));
+  const a = adaptRsqlExpressionToQuery(left as ExpressionNode);
+  const b = adaptRsqlExpressionToQuery(right as ExpressionNode);
+  console.log(
+    JSON.stringify({
+      leftKeys,
+      rightKeys,
+      left: a,
+      right: b,
+      merge: mergeArray([...a, ...b])
+    })
+  );
   return [
     mergeArray([
       ...adaptRsqlExpressionToQuery(left as ExpressionNode),
@@ -131,15 +149,22 @@ export const adaptRsqlExpressionToQuery = <T>(
   const selectorKey = (expression as ComparisonNode).left.selector;
   const isRelationField = selectorKey.includes('.');
   if (isRelationField) {
-    const [relation, field] = selectorKey.split('.');
-    return [
+    const selectors = selectorKey.split('.');
+    const lastRelations = selectors.slice(selectors.length - 2);
+    const relations =
+      selectors.length <= 2 ? [] : selectors.slice(0, selectors.length - 2);
+    const [relation, field] = lastRelations;
+    const result = relations.reduceRight(
+      (acc, relation) => ({ [relation]: acc } as FindOptionsWhere<T>),
       {
         [relation]: adaptRsqlExpressionToQuery({
           ...expression,
           left: { ...expression.left, selector: field }
-        } as ComparisonNode)
-      }
-    ] as FindOptionsWhere<T>[];
+        } as ComparisonNode)[0]
+      } as FindOptionsWhere<T>
+    );
+    console.log(JSON.stringify({ result, selectors, relations, field }));
+    return [result];
   }
   switch (expression.operator) {
     case EQ:
