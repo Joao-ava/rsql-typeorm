@@ -28,7 +28,7 @@ import {
 } from 'typeorm';
 
 const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
-  function mergeRecursive(first: T, second: T): T {
+  const mergeRecursive = <T>(first: T, second: T): T => {
     const firstKeys = Object.keys(first);
     const secondKeys = Object.keys(second);
     return secondKeys.reduce(
@@ -47,7 +47,7 @@ const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
       },
       { ...first }
     );
-  }
+  };
 
   return array.reduce((mergedObject, currentObject) => {
     return mergeRecursive(mergedObject, currentObject);
@@ -94,17 +94,6 @@ const handleAnd = ({
   const leftKeys = getSelectors(left as ExpressionNode);
   const rightKeys = getSelectors(right as ExpressionNode);
   const sameKeys = leftKeys.filter((key) => rightKeys.includes(key));
-  const a = adaptRsqlExpressionToQuery(left as ExpressionNode);
-  const b = adaptRsqlExpressionToQuery(right as ExpressionNode);
-  console.log(
-    JSON.stringify({
-      leftKeys,
-      rightKeys,
-      left: a,
-      right: b,
-      merge: mergeArray([...a, ...b])
-    })
-  );
   return [
     mergeArray([
       ...adaptRsqlExpressionToQuery(left as ExpressionNode),
@@ -163,7 +152,6 @@ export const adaptRsqlExpressionToQuery = <T>(
         } as ComparisonNode)[0]
       } as FindOptionsWhere<T>
     );
-    console.log(JSON.stringify({ result, selectors, relations, field }));
     return [result];
   }
   switch (expression.operator) {
