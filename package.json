@@ -35,6 +35,6 @@
     "@rsql/builder": "^1.4.0",
     "@rsql/emitter": "^1.4.0",
     "@rsql/parser": "^1.4.0",
-    "typeorm": "^0.3.7"
+    "typeorm": "^0.3.11"
   }
 }
