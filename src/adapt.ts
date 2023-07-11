@@ -24,7 +24,8 @@ import {
   MoreThanOrEqual,
   Not,
   And,
-  FindOperator
+  FindOperator,
+  InstanceChecker
 } from 'typeorm';
 
 const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
@@ -35,7 +36,9 @@ const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
       (acc, key) => {
         const firstHasKey = firstKeys.includes(key);
         const isObject =
-          typeof second[key] === 'object' && !Array.isArray(second[key]);
+          typeof second[key] === 'object' &&
+          !Array.isArray(second[key]) &&
+          !InstanceChecker.isFindOperator(second[key]);
         const value =
           firstHasKey && isObject
             ? mergeRecursive(first[key], second[key])
