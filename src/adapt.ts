@@ -114,6 +114,17 @@ const handleAnd = ({
   ];
 };
 
+const isDate = <T>(value: T): boolean => {
+  if (typeof value !== 'string') return false;
+  const dateRegex =
+    /\d{4}-\d{2}-\d{2}T?(\d{2}:\d{2}:\d{2})?(\+\d{2}:\d{2}Z?)?/gm;
+  return !!value.match(dateRegex)?.length;
+};
+
+const getScalarValue = <T>(value: T) => {
+  return isDate(value) ? new Date(value as string) : value;
+};
+
 export const adaptRsqlExpressionToQuery = <T>(
   expression: ExpressionNode
 ): FindOptionsWhere<T>[] => {
@@ -159,19 +170,23 @@ export const adaptRsqlExpressionToQuery = <T>(
       return handleEqual(expression);
     case GT:
       return [
-        { [selectorKey]: MoreThan(expression.right.value) }
+        { [selectorKey]: MoreThan(getScalarValue(expression.right.value)) }
       ] as FindOptionsWhere<T>[];
     case GE:
       return [
-        { [selectorKey]: MoreThanOrEqual(expression.right.value) }
+        {
+          [selectorKey]: MoreThanOrEqual(getScalarValue(expression.right.value))
+        }
       ] as FindOptionsWhere<T>[];
     case LT:
       return [
-        { [selectorKey]: LessThan(expression.right.value) }
+        { [selectorKey]: LessThan(getScalarValue(expression.right.value)) }
       ] as FindOptionsWhere<T>[];
     case LE:
       return [
-        { [selectorKey]: LessThanOrEqual(expression.right.value) }
+        {
+          [selectorKey]: LessThanOrEqual(getScalarValue(expression.right.value))
+        }
       ] as FindOptionsWhere<T>[];
     case NEQ:
       return [

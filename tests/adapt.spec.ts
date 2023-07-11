@@ -38,6 +38,11 @@ describe('adapt', () => {
         age: MoreThanOrEqual('17')
       }
     ]);
+    expect(sut('createdAt>=2023-07-07T03:00:00.000Z')).toMatchObject([
+      {
+        createdAt: MoreThanOrEqual(new Date('2023-07-07T03:00:00.000Z'))
+      }
+    ]);
   });
 
   it('should be create less than compare', () => {
