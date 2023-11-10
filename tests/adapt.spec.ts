@@ -61,10 +61,18 @@ describe('adapt', () => {
     ]);
   });
 
-  it('should be not equal than compare', () => {
+  it('should create not equal comparison', () => {
     expect(sut('age!=17')).toMatchObject([
       {
-        age: Not('17')
+        age: Not(Equal('17'))
+      }
+    ]);
+  });
+
+  it('should create not like comparison', () => {
+    expect(sut('age!=*17*')).toMatchObject([
+      {
+        age: Not(ILike('%17%'))
       }
     ]);
   });
@@ -128,6 +136,13 @@ describe('adapt', () => {
     expect(sut('name==John*,age<17')).toMatchObject([
       { name: ILike('John%') },
       { age: LessThan('17') }
+    ]);
+  });
+
+  it('should be able to perform the operation AND inside operation OR', () => {
+    expect(sut('franchiseId==8e0ebd11-ad1e-4177-9917-3be0041daa65;type==franchise_employee,franchiseId==8e0ebd11-ad1e-4177-9917-3be0041daa65;type==franchise_owner')).toMatchObject([
+      { franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'), type: Equal('franchise_employee') },
+      { franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'), type: Equal('franchise_owner') }
     ]);
   });
 
