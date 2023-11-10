@@ -61,10 +61,18 @@ describe('adapt', () => {
     ]);
   });
 
-  it('should be not equal than compare', () => {
+  it('should create not equal comparison', () => {
     expect(sut('age!=17')).toMatchObject([
       {
-        age: Not('17')
+        age: Not(Equal('17'))
+      }
+    ]);
+  });
+
+  it('should create not like comparison', () => {
+    expect(sut('age!=*17*')).toMatchObject([
+      {
+        age: Not(ILike('%17%'))
       }
     ]);
   });
