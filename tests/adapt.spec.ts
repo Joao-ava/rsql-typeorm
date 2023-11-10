@@ -131,6 +131,13 @@ describe('adapt', () => {
     ]);
   });
 
+  it('should be able to perform the operation AND inside operation OR', () => {
+    expect(sut('franchiseId==8e0ebd11-ad1e-4177-9917-3be0041daa65;type==franchise_employee,franchiseId==8e0ebd11-ad1e-4177-9917-3be0041daa65;type==franchise_owner')).toMatchObject([
+      { franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'), type: Equal('franchise_employee') },
+      { franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'), type: Equal('franchise_owner') }
+    ]);
+  });
+
   it('should be can filter relation items', () => {
     expect(sut('address.state==Arizona;address.city==Phoenix')).toMatchObject([
       {

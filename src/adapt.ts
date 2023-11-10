@@ -1,32 +1,19 @@
-import {
-  ExpressionNode,
-  ComparisonNode,
-  EQ,
-  GT,
-  GE,
-  LT,
-  LE,
-  NEQ,
-  IN,
-  OUT,
-  AND,
-  OR
-} from '@rsql/ast';
+import { AND, ComparisonNode, EQ, ExpressionNode, GE, GT, IN, LE, LT, NEQ, OR, OUT } from '@rsql/ast';
 import { parse } from '@rsql/parser';
 import {
+  And,
   Equal,
+  FindOperator,
   FindOptionsWhere,
+  ILike,
   In,
+  InstanceChecker,
+  IsNull,
   LessThan,
   LessThanOrEqual,
-  ILike,
   MoreThan,
   MoreThanOrEqual,
-  Not,
-  And,
-  FindOperator,
-  InstanceChecker,
-  IsNull
+  Not
 } from 'typeorm';
 
 const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
@@ -151,19 +138,10 @@ export const adaptRsqlExpressionToQuery = <T>(
   expression: ExpressionNode
 ): FindOptionsWhere<T>[] => {
   if (expression.operator == OR) {
-    const data = [
+    return [
       ...adaptRsqlExpressionToQuery(expression.left as ExpressionNode),
       ...adaptRsqlExpressionToQuery(expression.right as ExpressionNode)
     ];
-    return data.reduce(
-      (acc: FindOptionsWhere<T>[], option) => [
-        ...acc,
-        ...Object.keys(option).map((key) => ({
-          [key]: option[key]
-        }))
-      ],
-      [] as FindOptionsWhere<T>[]
-    ) as FindOptionsWhere<T>[];
   }
   if (expression.operator == AND) {
     return handleAnd(expression);
