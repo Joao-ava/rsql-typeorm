@@ -9,6 +9,8 @@ import {
   Not,
   And
 } from 'typeorm';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
 import { adaptRsqlStringToQuery } from '../src';
 
@@ -17,7 +19,7 @@ describe('adapt', () => {
     adaptRsqlStringToQuery<{ name: string }>(expression);
 
   it('should be create equals compare', () => {
-    expect(sut('name==John')).toMatchObject([
+    assert.deepStrictEqual(sut('name==John'), [
       {
         name: Equal('John')
       }
@@ -25,7 +27,7 @@ describe('adapt', () => {
   });
 
   it('should be create more than compare', () => {
-    expect(sut('age>17')).toMatchObject([
+    assert.deepStrictEqual(sut('age>17'), [
       {
         age: MoreThan('17')
       }
@@ -33,12 +35,12 @@ describe('adapt', () => {
   });
 
   it('should be create more than equal compare', () => {
-    expect(sut('age>=17')).toMatchObject([
+    assert.deepStrictEqual(sut('age>=17'), [
       {
         age: MoreThanOrEqual('17')
       }
     ]);
-    expect(sut('createdAt>=2023-07-07T03:00:00.000Z')).toMatchObject([
+    assert.deepStrictEqual(sut('createdAt>=2023-07-07T03:00:00.000Z'), [
       {
         createdAt: MoreThanOrEqual(new Date('2023-07-07T03:00:00.000Z'))
       }
@@ -46,7 +48,7 @@ describe('adapt', () => {
   });
 
   it('should be create less than compare', () => {
-    expect(sut('age<17')).toMatchObject([
+    assert.deepStrictEqual(sut('age<17'), [
       {
         age: LessThan('17')
       }
@@ -54,7 +56,7 @@ describe('adapt', () => {
   });
 
   it('should be create less than or equal compare', () => {
-    expect(sut('age<=17')).toMatchObject([
+    assert.deepStrictEqual(sut('age<=17'), [
       {
         age: LessThanOrEqual('17')
       }
@@ -62,7 +64,7 @@ describe('adapt', () => {
   });
 
   it('should create not equal comparison', () => {
-    expect(sut('age!=17')).toMatchObject([
+    assert.deepStrictEqual(sut('age!=17'), [
       {
         age: Not(Equal('17'))
       }
@@ -70,7 +72,7 @@ describe('adapt', () => {
   });
 
   it('should create not like comparison', () => {
-    expect(sut('age!=*17*')).toMatchObject([
+    assert.deepStrictEqual(sut('age!=*17*'), [
       {
         age: Not(ILike('%17%'))
       }
@@ -78,7 +80,7 @@ describe('adapt', () => {
   });
 
   it('should be in compare', () => {
-    expect(sut('name=in=(John,Doe)')).toMatchObject([
+    assert.deepStrictEqual(sut('name=in=(John,Doe)'), [
       {
         name: In(['John', 'Doe'])
       }
@@ -86,7 +88,7 @@ describe('adapt', () => {
   });
 
   it('should be not in compare', () => {
-    expect(sut('name=out=(John,Doe)')).toMatchObject([
+    assert.deepStrictEqual(sut('name=out=(John,Doe)'), [
       {
         name: Not(In(['John', 'Doe']))
       }
@@ -94,17 +96,17 @@ describe('adapt', () => {
   });
 
   it('should be like compare', () => {
-    expect(sut('name==*John')).toMatchObject([
+    assert.deepStrictEqual(sut('name==*John'), [
       {
         name: ILike('%John')
       }
     ]);
-    expect(sut('name==John*')).toMatchObject([
+    assert.deepStrictEqual(sut('name==John*'), [
       {
         name: ILike('John%')
       }
     ]);
-    expect(sut('name==*John*')).toMatchObject([
+    assert.deepStrictEqual(sut('name==*John*'), [
       {
         name: ILike('%John%')
       }
@@ -112,14 +114,14 @@ describe('adapt', () => {
   });
 
   it('should be and compare', () => {
-    expect(sut('name==John;age==17;id==2')).toMatchObject([
+    assert.deepStrictEqual(sut('name==John;age==17;id==2'), [
       {
         age: Equal('17'),
         name: Equal('John'),
         id: Equal('2')
       }
     ]);
-    expect(sut('name==John*;age<17')).toMatchObject([
+    assert.deepStrictEqual(sut('name==John*;age<17'), [
       {
         name: ILike('John%'),
         age: LessThan('17')
@@ -128,36 +130,37 @@ describe('adapt', () => {
   });
 
   it('should be or compare', () => {
-    expect(sut('name==John,age==17,id==2')).toMatchObject([
+    assert.deepStrictEqual(sut('name==John,age==17,id==2'), [
       { name: Equal('John') },
       { age: Equal('17') },
       { id: Equal('2') }
     ]);
-    expect(sut('name==John*,age<17')).toMatchObject([
+    assert.deepStrictEqual(sut('name==John*,age<17'), [
       { name: ILike('John%') },
       { age: LessThan('17') }
     ]);
   });
 
   it('should be able to perform the operation AND inside operation OR', () => {
-    expect(
+    assert.deepStrictEqual(
       sut(
         'franchiseId==8e0ebd11-ad1e-4177-9917-3be0041daa65;type==franchise_employee,franchiseId==8e0ebd11-ad1e-4177-9917-3be0041daa65;type==franchise_owner'
-      )
-    ).toMatchObject([
-      {
-        franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'),
-        type: Equal('franchise_employee')
-      },
-      {
-        franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'),
-        type: Equal('franchise_owner')
-      }
-    ]);
+      ),
+      [
+        {
+          franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'),
+          type: Equal('franchise_employee')
+        },
+        {
+          franchiseId: Equal('8e0ebd11-ad1e-4177-9917-3be0041daa65'),
+          type: Equal('franchise_owner')
+        }
+      ]
+    );
   });
 
   it('should be can filter relation items', () => {
-    expect(sut('address.state==Arizona;address.city==Phoenix')).toMatchObject([
+    assert.deepStrictEqual(sut('address.state==Arizona;address.city==Phoenix'), [
       {
         address: {
           state: Equal('Arizona'),
@@ -165,33 +168,35 @@ describe('adapt', () => {
         }
       }
     ]);
-    expect(
-      sut('price.amount>20;name==Product;price.currency==USD')
-    ).toMatchObject([
-      {
-        name: Equal('Product'),
-        price: {
-          amount: MoreThan('20'),
-          currency: Equal('USD')
-        }
-      }
-    ]);
-    expect(
-      sut('roles.name==Admin;roles.permission.name==Create')
-    ).toMatchObject([
-      {
-        roles: {
-          name: Equal('Admin'),
-          permission: {
-            name: Equal('Create')
+    assert.deepStrictEqual(
+      sut('price.amount>20;name==Product;price.currency==USD'),
+      [
+        {
+          name: Equal('Product'),
+          price: {
+            amount: MoreThan('20'),
+            currency: Equal('USD')
           }
         }
-      }
-    ]);
+      ]
+    );
+    assert.deepStrictEqual(
+      sut('roles.name==Admin;roles.permission.name==Create'),
+      [
+        {
+          roles: {
+            name: Equal('Admin'),
+            permission: {
+              name: Equal('Create')
+            }
+          }
+        }
+      ]
+    );
   });
 
   it('should be able to perform the operation AND in the same field', () => {
-    expect(sut('amount>0;amount<20')).toMatchObject([
+    assert.deepStrictEqual(sut('amount>0;amount<20'), [
       { amount: And(MoreThan('0'), LessThan('20')) }
     ]);
   });
