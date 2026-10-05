@@ -29,34 +29,37 @@ import {
   Not
 } from 'typeorm';
 
-const mergeArray = <T extends Record<string, any>>(array: T[]): T => {
-  const mergeRecursive = <T>(first: T, second: T): T => {
-    const firstKeys = Object.keys(first);
-    const secondKeys = Object.keys(second);
-    return secondKeys.reduce(
-      (acc, key) => {
-        const firstHasKey = firstKeys.includes(key);
-        const isObject =
-          typeof second[key] === 'object' &&
-          !Array.isArray(second[key]) &&
-          !InstanceChecker.isFindOperator(second[key]);
-        const value =
-          firstHasKey && isObject
-            ? mergeRecursive(first[key], second[key])
-            : second[key];
-        return {
-          ...acc,
-          [key]: value
-        };
-      },
-      { ...first }
-    );
-  };
+const getAndOperands = (
+  operator: FindOperator<unknown>
+): FindOperator<unknown>[] => {
+  if (operator.type === 'and') return (operator.value as unknown as FindOperator<unknown>[])
+  return [operator];
+}
 
-  return array.reduce((mergedObject, currentObject) => {
-    return mergeRecursive(mergedObject, currentObject);
-  }, {} as T);
-};
+const combineOperators = (
+  first: FindOperator<unknown>,
+  second: FindOperator<unknown>
+): FindOperator<unknown> =>
+  And(...getAndOperands(first), ...getAndOperands(second));
+
+// Merges two conjunctions (AND), combining operators on the same field with And()
+const mergeConjunctions = <T extends Record<string, any>>(
+  first: T,
+  second: T
+): T =>
+  Object.keys(second).reduce(
+    (acc, key) => {
+      if (!(key in acc)) return { ...acc, [key]: second[key] };
+      const bothOperators =
+        InstanceChecker.isFindOperator(acc[key]) &&
+        InstanceChecker.isFindOperator(second[key]);
+      const value = bothOperators
+        ? combineOperators(acc[key], second[key])
+        : mergeConjunctions(acc[key], second[key]);
+      return { ...acc, [key]: value };
+    },
+    { ...first }
+  );
 
 const handleEqual = <T>(expression: ComparisonNode): FindOptionsWhere<T>[] => {
   const selectorKey = (expression as ComparisonNode).left.selector;
@@ -90,50 +93,21 @@ const handleNotEqual = <T>(
   return [{ [selectorKey]: Not(ILike(finalValue)) }] as FindOptionsWhere<T>[];
 };
 
-const getComparisonBySelector = (
-  key: string,
-  expression: ExpressionNode
-): ExpressionNode[] => {
-  if (expression.type === 'LOGIC')
-    return [
-      ...getComparisonBySelector(key, expression.left),
-      ...getComparisonBySelector(key, expression.right)
-    ];
-
-  if (expression.left.selector !== key) return [];
-  return [expression];
-};
-
-const getSelectors = (expression: ExpressionNode): string[] => {
-  if (expression.type === 'COMPARISON') return [expression.left.selector];
-  return [...getSelectors(expression.left), ...getSelectors(expression.right)];
-};
-
-const handleAnd = ({
+// TypeORM `where` arrays are an OR of AND objects (disjunctive normal form),
+// so AND distributes over OR: (a,b);(c,d) => a;c , a;d , b;c , b;d
+const handleAnd = <T>({
   left,
   right
-}: ExpressionNode): FindOptionsWhere<unknown>[] => {
-  const leftKeys = getSelectors(left as ExpressionNode);
-  const rightKeys = getSelectors(right as ExpressionNode);
-  const sameKeys = leftKeys.filter((key) => rightKeys.includes(key));
-  return [
-    mergeArray([
-      ...adaptRsqlExpressionToQuery(left as ExpressionNode),
-      ...adaptRsqlExpressionToQuery(right as ExpressionNode),
-      ...sameKeys.map((key) => ({
-        [key]: And(
-          ...([
-            getComparisonBySelector(key, left as ExpressionNode).map((item) =>
-              adaptRsqlExpressionToQuery(item).map((result) => result[key])
-            ),
-            getComparisonBySelector(key, right as ExpressionNode).map((item) =>
-              adaptRsqlExpressionToQuery(item).map((result) => result[key])
-            )
-          ].flat(2) as unknown as FindOperator<unknown>[])
-        )
-      }))
-    ])
-  ];
+}: ExpressionNode): FindOptionsWhere<T>[] => {
+  const leftConjunctions = adaptRsqlExpressionToQuery<T>(left as ExpressionNode);
+  const rightConjunctions = adaptRsqlExpressionToQuery<T>(
+    right as ExpressionNode
+  );
+  return leftConjunctions.flatMap((leftConjunction) =>
+    rightConjunctions.map((rightConjunction) =>
+      mergeConjunctions(leftConjunction, rightConjunction)
+    )
+  );
 };
 
 const isDate = <T>(value: T): boolean => {
@@ -157,7 +131,7 @@ export const adaptRsqlExpressionToQuery = <T>(
     ];
   }
   if (expression.operator == AND) {
-    return handleAnd(expression);
+    return handleAnd<T>(expression);
   }
   const selectorKey = (expression as ComparisonNode).left.selector;
   const isRelationField = selectorKey.includes('.');
