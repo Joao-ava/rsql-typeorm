@@ -1,4 +1,17 @@
-import { AND, ComparisonNode, EQ, ExpressionNode, GE, GT, IN, LE, LT, NEQ, OR, OUT } from '@rsql/ast';
+import {
+  AND,
+  ComparisonNode,
+  EQ,
+  ExpressionNode,
+  GE,
+  GT,
+  IN,
+  LE,
+  LT,
+  NEQ,
+  OR,
+  OUT
+} from '@rsql/ast';
 import { parse } from '@rsql/parser';
 import {
   And,
