@@ -30,6 +30,7 @@ bower_components
 .idea
 .vscode
 *.iml
+.junie
 
 # OS metadata
 .DS_Store
